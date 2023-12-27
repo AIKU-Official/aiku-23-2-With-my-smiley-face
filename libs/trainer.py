@@ -89,14 +89,10 @@ class Trainer(object):
 		random_exp_idx = random.randint(0, 8900)
 		with open(file, 'rb') as f:
 			self.ffhq_deca = pickle.load(f)
-			#self.ffhq_deca_exp = self.ffhq_deca['frames']['00000']['exp']
 			self.ffhq_deca_exp = self.ffhq_deca['frames'][f'{random_exp_idx:05d}']['exp']		
-   #print(len(self.ffhq_deca_exp))
-			# print(f"now:{random_exp_idx:05d}")
+
 		self.ffhq_deca_exp = torch.tensor(self.ffhq_deca_exp)
-		#print(self.ffhq_deca_exp.shape)
 		self.ffhq_deca_exp = self.ffhq_deca_exp.unsqueeze(0)
-		#print(self.ffhq_deca_exp.shape)
 		return self.ffhq_deca_exp, random_exp_idx
       
    
@@ -162,10 +158,6 @@ class Trainer(object):
 			out_text = 'Network {}: ----> input_dim:{} - output_dim:{}'.format(layer_idx, input_dim, output_dim)
 			print(out_text)
 	
-	def initialize_train_utils(self):
-		#self.train_utils = Train_Utils()
-		pass
-
 	def configure_dataset(self):
 		self.test_dataset = CustomDataset_validation(synthetic_dataset_path = self.synthetic_dataset_path, validation_pairs = self.validation_pairs)	
 		
@@ -211,26 +203,6 @@ class Trainer(object):
 		
 		return imgs_shifted, new_style_space
 
-	# get shifted image by shifted code
-	# def get_shifted_image(self, style_shifted, w_shifted, noise_shifted):
-	# 	# Generate shift
-	# 	masks_per_layer = []
-	# 	for layer_idx in range(self.num_nets):
-	# 		network_name_str = 'network_{:02d}'.format(layer_idx)
-	# 		style_shifted_idx = style_shifted[layer_idx]
-	# 		styles = style_shifted_idx
-	# 		mask_idx = self.mask_net[network_name_str](styles)
-	# 		masks_per_layer.append(mask_idx)
-
-	# 	mask = torch.cat(masks_per_layer, dim=1)
-	# 	style_shifted = torch.cat(style_shifted, dim=1)
-	# 	new_style_space = generate_new_stylespace(style_shifted, mask, self.num_layers_control)
-		
-	# 	new_style_space = list(torch.split(tensor=new_style_space, split_size_or_sections=self.split_sections, dim=1))
-	# 	imgs_shifted = decoder(self.G, new_style_space, w_shifted, noise_shifted, resize_image = True)
-		
-	# 	return imgs_shifted, new_style_space
-
 	def train(self):
 
 		self.load_models()
@@ -272,27 +244,22 @@ class Trainer(object):
 			loss_dict = {}
 			self.G.zero_grad()
 			source_z = make_noise(self.batch_size, 512, None).cuda()				
-			#target_z = make_noise(self.batch_size, 512, None).cuda()	
 			target_z = source_z
 			with torch.no_grad():
 				######## Source images ########
 				imgs_source, style_source, w_source, noise_source = generate_image(self.G, source_z, self.truncation, self.trunc, self.image_resolution,
 					input_is_latent = input_is_latent, return_latents= True, resize_image = True)
 				params_source, angles_source = calculate_shapemodel(self.deca, imgs_source)
-				#print(params_source['alpha_exp'].shape)
-				#print(type(params_source['alpha_exp'].shape))
+		
 
 				######## Target ########
 				imgs_target, style_target, w_target, noise_target = generate_image(self.G, target_z, self.truncation, self.trunc, self.image_resolution, 
                     input_is_latent= input_is_latent,return_latents=True, resize_image=True)
 				params_target, angles_target = calculate_shapemodel(self.deca, imgs_target)
 				self.load_random_expressions()
-				params_target = params_source # 이거체크
+				params_target = params_source 
 				params_target['alpha_exp'] = self.ffhq_deca_exp.to(device)
-				# imgs_target = imgs_source
-				# style_target = style_source 
-				# w_target = w_source 
-				# noise_target = noise_source  
+			
 				imgs_target = imgs_source
 				style_target = style_source
 				w_target = w_source
@@ -308,13 +275,8 @@ class Trainer(object):
 				imgs_shifted, style_shifted, w_shifted, noise_shifted = generate_image(self.G, source_z, self.truncation, self.trunc, self.image_resolution, shift_code = shift_vector, 
 											input_is_latent= input_is_latent, return_latents=True, resize_image=True)
 				params_shifted, angles_shifted = calculate_shapemodel(self.deca, imgs_shifted)
-				# imgs_shifted, new_style_space = self.get_shifted_image(style_shifted, w_shifted, noise_shifted)
 				imgs_shifted, new_style_space = self.get_shifted_image(style_source, style_shifted, w_source, noise_source)
-   			######## Generate reenacted image between source and target images ########
-			# imgs_shifted, new_style_space = self.get_shifted_image(style_source, style_target, w_source, noise_source)	
-			# params_shifted, angles_shifted = calculate_shapemodel(self.deca, imgs_shifted)
-			
-      
+   		
 				
 			loss, loss_dict = self.calculate_loss(params_source, params_shifted, params_target, imgs_source, imgs_shifted)
 
@@ -351,13 +313,6 @@ class Trainer(object):
 
 				#####################################################################
 
-				#### Reenact initial shifted image into the facial pose of target_z_cycle ####
-				# imgs_shifted_hat_2, new_style_space_hat_2 = self.get_shifted_image(new_style_space, style_target_cycle, w_source, noise_source)
-				# params_shifted_hat_2, angles_shifted_hat_2 = calculate_shapemodel(self.deca, imgs_shifted_hat_2)
-
-				# loss_cycle, loss_dict = self.calculate_recurrent_loss(params_source, params_target_cycle, params_shifted_hat, 
-				# 													  params_shifted_hat_2, imgs_source, imgs_shifted_hat, imgs_shifted_hat_2, loss_dict)
-				# loss += loss_cycle
 
 			############## Total loss ##############	
 			list_loss.append(loss.data.item())
@@ -543,7 +498,7 @@ class Trainer(object):
 		counter_logs = 0
 		counter_interpolate_logs = 0
 		source_images = torch.zeros((self.num_pairs_log, 3, 256, 256))
-		#target_images = source_images #서로 동일한 id. #torch.zeros((self.num_pairs_log, 3, 256, 256))
+		#target_images = source_images #
 		reenacted_images1 = torch.zeros((self.num_pairs_log, 3, 256, 256))
 		reenacted_images2 = torch.zeros((self.num_pairs_log, 3, 256, 256))
 		reenacted_images3 = torch.zeros((self.num_pairs_log, 3, 256, 256))
