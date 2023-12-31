@@ -31,6 +31,8 @@ reference image가 들어왔을 때, 원본 이미지의 표정을 자유롭게 
 
 
 ## 예시 결과
+![image](https://github.com/AIKU-Official/aiku-23-2-With-my-smiley-face/assets/73789740/bc4a93a3-c0b7-4b33-8caf-20cc400c77f7)
+![image](https://github.com/AIKU-Official/aiku-23-2-With-my-smiley-face/assets/73789740/8ea3c16c-fffc-49c7-b1f1-58a517a451e7)
 
 
 ## 팀원
