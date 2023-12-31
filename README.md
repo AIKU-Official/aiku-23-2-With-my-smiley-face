@@ -14,7 +14,7 @@ reference image가 들어왔을 때, 원본 이미지의 표정을 자유롭게 
 2) StyleMask 변형 - single image
    
 ## 환경 설정
-
+```
   !pip install face_alignment
   !conda install pytorch==1.7.0 torchvision==0.8.0 cudatoolkit=11.0 -c pytorch
   !conda install -c fvcore -c iopath -c conda-forge fvcore iopath
@@ -24,7 +24,7 @@ reference image가 들어왔을 때, 원본 이미지의 표정을 자유롭게 
   !pip install "git+https://github.com/facebookresearch/pytorch3d.git"
   !pip install kornia==0.4.1
   !pip install chumpy
-
+```
 
 ## 사용 방법
 
